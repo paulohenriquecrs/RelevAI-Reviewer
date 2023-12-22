@@ -3,6 +3,24 @@ This repository is for M1 students who are taking the class **Create an AI Chall
 
 ***
 
-## [Soundness](Soundness/)
+## 1. [Soundness](Soundness/)
 
-## [Relevance](Relevance/)
+## 2. [Relevance](Relevance/)
+
+## Credits
+
+#### Instructors
+
+- Isabelle Guyon (Google, ChaLearn, Université Paris-Saclay)
+- Lisheng Sun (Université Paris-Saclay, LISN)
+- Ihsan Ullah (ChaLearn)
+
+#### Coaches
+
+- Benedictus Kent RACHMAT (Université Paris-Saclay)
+- Hieu Khuong T.G. (Université Paris-Saclay)
+
+#### TER Students
+
+- Paulo Couto (Université Paris-Saclay)
+- Nesrine Lagraa (Université Paris-Saclay)
