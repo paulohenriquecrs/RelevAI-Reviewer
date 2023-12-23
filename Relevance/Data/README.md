@@ -4,7 +4,7 @@
 
 ## Data
 
-We have provided you a sample data `data_sample.csv`, to experiemnt with and use it the way you want. Read the following sections to understand the data collection process and dataset description.
+We have provided you a sample data `relevance_sample_data.csv`, to experiemnt with and use it the way you want. Read the following sections to understand the data collection process and dataset description.
 
 ## Data Collection Process
 
