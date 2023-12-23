@@ -4,7 +4,7 @@
 
 ## Introduction
 
-Welcome to the RelevAI-Reviewer project, a collaborative effort led by <a href="mailto:ihsan2131@gmail.com">Ihsan Ullah</a> (Instructor) and <a href="mailto:benedictus-kent.rachmat@universite-paris-saclay.fr">Benedictus Kent RACHMAT</a> (Coach). In a peer-reviewed journal context, the Relevance criterion is crucial for evaluating how effectively a paper addresses its designated prompt. Our project focuses on developing an AI-reviewer that can assess the degree of relevance between a given survey paper and its assigned prompt.
+Welcome to the RelevAI-Reviewer project, a collaborative effort led by Ihsan Ullah (Instructor) and Benedictus Kent RACHMAT (Coach). In a peer-reviewed journal context, the Relevance criterion is crucial for evaluating how effectively a paper addresses its designated prompt. Our project focuses on developing an AI-reviewer that can assess the degree of relevance between a given survey paper and its assigned prompt.
 
 
 ## Getting Started
