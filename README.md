@@ -1,4 +1,4 @@
-# M1 - Creation an AI Challenge Class
+# M1 - Creation an AI Challenge
 ## Relevance Group
 This repository is where the Relevance Group will submit all the deliveries for the M1 Creation an AI Challenge Class
 
