@@ -1,0 +1,54 @@
+# Relevance competition yaml file
+# Created by: Ihsan Ullah
+# Created on: 18 January, 2024
+
+version: 2
+title: Relevance
+description: Relevance competition for M1 AI competition class
+image: logo.png
+has_registration: True   
+force_submission_to_leaderboard: True
+docker_image: ihsaanullah/llm:latest
+
+terms: pages/terms.md
+pages:  
+  - title: Overview
+    file: pages/overview.md
+  - title: Evaluation
+    file: pages/evaluation.md
+  - title: Terms
+    file: pages/terms.md
+  - title: Data
+    file: pages/data.md
+
+phases:
+  - index: 0
+    name: Phase 1
+    description: Feedback Phase
+    start: 2024-01-18
+    end: 2024-02-18
+    tasks:
+      - 0
+
+tasks:
+  - index: 0
+    name: Relevance Rank
+    description: Relevance Rank Computation
+    input_data: input_data/
+    reference_data: reference_data/  
+    scoring_program: scoring_program/
+    ingestion_program: ingestion_program/
+
+
+leaderboards:
+  - index: 0 
+    title: Results
+    key: main
+    submission_rule: "Force_Latest_Multiple"
+    columns:
+      - index: 0
+        title: k_tau
+        key: k_tau
+ 
+
+
