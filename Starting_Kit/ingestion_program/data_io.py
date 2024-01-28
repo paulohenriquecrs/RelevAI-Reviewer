@@ -192,11 +192,26 @@ def write(filename, predictions):
 # -------------------------------------
 # Zip files
 # -------------------------------------
+# def zipdir(archivename, basedir):
+#     '''Zip directory, from J.F. Sebastian http://stackoverflow.com/'''
+#     assert os.path.isdir(basedir)
+#     with closing(ZipFile(archivename, "w", ZIP_DEFLATED)) as z:
+#         for root, dirs, files in os.walk(basedir):
+#             # NOTE: ignore empty directories
+#             for fn in files:
+#                 if fn[-4:] != '.zip' and fn != '.DS_Store':
+#                     absfn = os.path.join(root, fn)
+#                     zfn = absfn[len(basedir):]  # XXX: relative path
+#                     z.write(absfn, zfn)
+                
 def zipdir(archivename, basedir):
     '''Zip directory, from J.F. Sebastian http://stackoverflow.com/'''
     assert os.path.isdir(basedir)
     with closing(ZipFile(archivename, "w", ZIP_DEFLATED)) as z:
         for root, dirs, files in os.walk(basedir):
+            # Exclude __pycache__ directory
+            dirs[:] = [d for d in dirs if d != '__pycache__']
+
             # NOTE: ignore empty directories
             for fn in files:
                 if fn[-4:] != '.zip' and fn != '.DS_Store':
