@@ -5,5 +5,5 @@ This repository is where the Relevance Group will submit all the deliveries for 
 #### Students
 
 - Paulo Henrique Couto (Group Leader)
-- Pegah Khazaie
+- Nageeta Kumari 
 - Quang Phuoc HO
