@@ -3,7 +3,7 @@
 ***
 
 Check `README.ipynb` to get started with the startig kit or use the following Google Colab notebook:  
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1ox8Ft80ylHu5KnDmaVl9Ens5GQCEizeI?usp=sharing)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1Hf71xBmkCQE9FbYQYXEGvYoZe0TmylPm?usp=sharing)
 
 ### Virtual env
 Follow these instructions to create and run your notebook in a conda env.
