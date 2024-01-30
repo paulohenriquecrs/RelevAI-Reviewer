@@ -1,35 +1,3 @@
-# Relevance Starting Kit
+# Relevance Baseline 1
 
-***
-
-Check `README.ipynb` to get started with the startig kit or use the following Google Colab notebook:  
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1ox8Ft80ylHu5KnDmaVl9Ens5GQCEizeI?usp=sharing)
-
-### Virtual env
-Follow these instructions to create and run your notebook in a conda env.
-
-1. Create conda env
-
-```bash
-conda create -n relevance python=3.9
-```
-
-2. Activate env
-
-```bash
-conda activate relevance
-```
-
-3. Install required packages
-
-```bash
-pip install \
-numpy \
-pandas \
-matplotlib \
-scikit-learn \
-sentence-transformers \
-transformers \
-torch \
-ipywidgets
-```
+### This baseline uses BertForSequenceClassification to predict the relevance class of each text.
