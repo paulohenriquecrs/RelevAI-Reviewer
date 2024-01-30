@@ -1,3 +1,7 @@
+"""The Ingestion class is designed to handle the entire data ingestion process, 
+    which includes loading, transforming, preparing, training a model, making predictions,
+    and saving results
+"""
 # ------------------------------------------
 # Imports
 # ------------------------------------------
@@ -19,9 +23,14 @@ warnings.filterwarnings("ignore")
 tqdm.pandas()
 
 
+
 # ------------------------------------------
 # Default Directories
 # ------------------------------------------
+
+""" Setting up the directory paths for input, output, and program files.
+These directories will be used throughout the script.
+"""
 # Root directory
 module_dir = os.path.dirname(os.path.realpath(__file__))
 root_dir = os.path.dirname(module_dir)
@@ -46,8 +55,12 @@ sys.path.append(submission_dir)
 from model import Model
 
 
-class Ingestion():
 
+class Ingestion():
+    """ Defining the Ingestion class responsible for handling data loading,
+        transformation, preparation, model initialization, fitting, predicting,
+        and result saving.
+    """
     def __init__(self):
 
         # Initialize class variables
@@ -56,12 +69,15 @@ class Ingestion():
         self.model = None
 
     def start_timer(self):
+        # Start the timer to measure script execution time
         self.start_time = dt.now()
 
     def stop_timer(self):
+        #  Stop the timer when script execution is completed.
         self.end_time = dt.now()
 
     def get_duration(self):
+        #  Calculate and return the total duration of script execution.
         if self.start_time is None:
             print("[-] Timer was never started. Returning None")
             return None
@@ -73,11 +89,13 @@ class Ingestion():
         return self.end_time - self.start_time
 
     def show_duration(self):
+        # Display the total duration of script execution
         print("\n---------------------------------")
         print(f'[✔] Total duration: {self.get_duration()}')
         print("---------------------------------")
 
     def load_data(self):
+        #  Load data from a CSV file into a Pandas DataFrame.
         print("[*] Loading Data")
 
         # data file path
@@ -111,6 +129,7 @@ class Ingestion():
         return text
 
     def transfrom_data(self):
+        # Transform textual data in the DataFrame by converting it into dictionaries and paragraphs.
 
         print("[*] Transforming Data")
 
@@ -139,9 +158,10 @@ class Ingestion():
         return embedding1.cpu(), embedding2.cpu()
 
     def prepare_data(self):
-
+        # Prepare the data for training by creating embeddings and labels.
         print("[*] Prepare Data for Training")
 
+        # Set up the SentenceTransformer model for generating embeddings.
         model_name = 'paraphrase-MiniLM-L6-v2'
         device = "cuda" if torch.cuda.is_available() else "cpu"
         self.embeddings_model = SentenceTransformer(model_name, device=device)
@@ -171,27 +191,33 @@ class Ingestion():
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     def get_train_data(self):
+        # Return the training data for the model.
         return self.X_train, self.y_train
 
     def get_test_data(self):
+        # Return the test data for evaluating the model.
         return self.X_test, self.y_test
 
     def init_submission(self):
+        # Initialize the submitted model for training and prediction.
         print("[*] Initializing Submmited Model")
         self.model = Model()
 
     def fit_submission(self):
+        # Train the submitted model on the training data.
         print("[*] Calling fit method of submitted model")
         X_train, y_train  = self.get_train_data()
         self.model.fit(X_train, y_train)
 
     def predict_submission(self):
+        # Use the trained model to make predictions on the test data.
         print("[*] Calling predict method of submitted model")
 
         X_test, _ = self.get_test_data()
         self.y_test_hat = self.model.predict(X_test)
 
     def save_result(self):
+        # Save the ingestion result
         print("[*] Saving ingestion result")
 
         _, y_test = self.get_test_data()

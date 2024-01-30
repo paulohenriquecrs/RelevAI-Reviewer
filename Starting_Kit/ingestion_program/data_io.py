@@ -1,9 +1,7 @@
-# This file consists of functions for
-# > Data Loading
-# > Data Checking
-# > Writing Predictions
-# > Zip files
-
+""" The `Data_io` file comprises fundamental methods primarily designed 
+    for tasks related to data reading, data loading, data writing, and
+    displaying data.
+ """
 
 # -------------------------------------
 # Imports
@@ -20,6 +18,20 @@ import json
 # Load Data
 # -------------------------------------
 def load_data(_data_dir, data_type="train", index=False):
+    """
+    The method Load data from specified directories.
+
+    Parameters:
+        _data_dir (str): Base directory containing 'train' or 'test' subdirectories.
+        data_type (str): Type of data to load ('train' or 'test').
+        index (bool): Flag to determine if index should be used.
+
+    Returns:
+        list: List of dictionaries containing data, labels, and settings.
+
+    Example:
+        load_data("/path/to/data", data_type="train", index=False)
+    """
 
     print("\n\n###-------------------------------------###")
     print("### Data Loading")
@@ -113,6 +125,18 @@ def load_data(_data_dir, data_type="train", index=False):
 # Read Data File
 # ------------------------------------
 def read_data_file(data_file):
+    """
+    Read a CSV data file.
+
+    Parameters:
+        data_file (str): Path to the CSV data file.
+
+    Returns:
+        pd.DataFrame: Loaded data as a pandas DataFrame.
+
+    Example:
+        read_data_file("/path/to/data.csv")
+    """
 
     # check data file
     if not os.path.isfile(data_file):
@@ -129,6 +153,18 @@ def read_data_file(data_file):
 # Read Labels File
 # -------------------------------------
 def read_labels_file(labels_file):
+    """
+    Read labels from a labels file.
+
+    Parameters:
+        labels_file (str): Path to the labels file.
+
+    Returns:
+        np.ndarray: Loaded labels as a NumPy array.
+
+    Example:
+        read_labels_file("/path/to/labels.labels")
+    """
 
     # check labels file
     if not os.path.isfile(labels_file):
@@ -147,6 +183,18 @@ def read_labels_file(labels_file):
 # Read Json File
 # -------------------------------------
 def read_json_file(json_file):
+    """
+    Read data from a JSON file.
+
+    Parameters:
+        json_file (str): Path to the JSON file.
+
+    Returns:
+        dict: Loaded data as a dictionary.
+
+    Example:
+        read_json_file("/path/to/settings.json")
+    """
 
     # check json file
     if not os.path.isfile(json_file):
@@ -159,6 +207,16 @@ def read_json_file(json_file):
 # Data Statistics
 # -------------------------------------
 def show_data_statistics(data_sets, name="Train"):
+    """
+    Display statistics about the loaded datasets.
+
+    Parameters:
+        data_sets (list): List of datasets.
+        name (str): Name of the datasets (default is "Train").
+
+    Example:
+        show_data_statistics(data_sets, name="Test")
+    """
 
     print("###-------------------------------------###")
     print("### Data Statistics " + name)
@@ -179,6 +237,16 @@ def show_data_statistics(data_sets, name="Train"):
 # Write Predictions
 # -------------------------------------
 def write(filename, predictions):
+    """
+    Write predictions to a file.
+
+    Parameters:
+        filename (str): Path to the output file.
+        predictions (list): List of predictions.
+
+    Example:
+        write("/path/to/predictions.txt", predictions)
+    """
 
     with open(filename, 'w') as f:
         for ind, lbl in enumerate(predictions):
@@ -190,13 +258,27 @@ def write(filename, predictions):
 
 
 # -------------------------------------
-# Zip files
+# Zip folder
 # -------------------------------------
+
 def zipdir(archivename, basedir):
+    """
+    Zip a directory, excluding the '__pycache__' directory.
+
+    Parameters:
+        archivename (str): Name of the output zip file.
+        basedir (str): Path to the directory to be zipped.
+
+    Example:
+        zipdir("name.zip", "/path/to/source/dir")
+    """
     '''Zip directory, from J.F. Sebastian http://stackoverflow.com/'''
     assert os.path.isdir(basedir)
     with closing(ZipFile(archivename, "w", ZIP_DEFLATED)) as z:
         for root, dirs, files in os.walk(basedir):
+            # Exclude __pycache__ directory
+            dirs[:] = [d for d in dirs if d != '__pycache__']
+
             # NOTE: ignore empty directories
             for fn in files:
                 if fn[-4:] != '.zip' and fn != '.DS_Store':
