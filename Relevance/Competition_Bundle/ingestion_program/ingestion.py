@@ -1,3 +1,8 @@
+"""The Ingestion class is designed to handle the entire data ingestion process, 
+    which includes loading, transforming, preparing, training a model, making predictions,
+    and saving results
+"""
+
 # ------------------------------------------
 # Imports
 # ------------------------------------------

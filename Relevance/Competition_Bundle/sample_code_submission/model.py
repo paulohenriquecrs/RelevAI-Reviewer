@@ -1,12 +1,11 @@
-# Model file which contains a model class in scikit-learn style
-# Model class must have these 3 methods
-# - __init__: initializes the model
-# - fit: trains the model
-# - predict: uses the model to perform predictions
-#
-# Created by: Ihsan Ullah
-# Created on: 10 Jan, 2024
-
+""" The `Model` file encapsulates a model class structured in the style of scikit-learn. 
+    This model class is equipped with three essential methods:
+    - __init__: Initializes the model.
+    - fit: Trains the model.
+    - predict: Utilizes the model to make predictions.
+Created by: Ihsan Ullah
+Created on: 10 Jan, 2024
+"""
 # ----------------------------------------
 # Imports
 # ----------------------------------------

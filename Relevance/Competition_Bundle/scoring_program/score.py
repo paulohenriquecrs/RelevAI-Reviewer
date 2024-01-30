@@ -1,3 +1,9 @@
+"""The Scoring class is designed to perform scoring tasks and manage related functionalities.
+    The purpose of this class is to evaluate the performance of a model by comparing its predicted 
+    labels with the ground truth labels.
+    It computes various scoring metrics, writes the results to a JSON file, and generates an HTML file
+    containing detailed results. 
+"""
 # ------------------------------------------
 # Imports
 # ------------------------------------------
