@@ -1,8 +1,3 @@
-"""The Ingestion class is designed to handle the entire data ingestion process, 
-    which includes loading, transforming, preparing, training a model, making predictions,
-    and saving results
-"""
-
 # ------------------------------------------
 # Imports
 # ------------------------------------------
@@ -10,14 +5,18 @@ import sys
 import os
 import json
 import pandas as pd
+import numpy as np
 from datetime import datetime as dt
 import ast
 from tqdm.notebook import tqdm
 from sentence_transformers import SentenceTransformer
+from transformers import BertTokenizer, BertForSequenceClassification
 
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 import torch
+
+from torch.utils.data import DataLoader, TensorDataset
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -27,32 +26,17 @@ tqdm.pandas()
 # ------------------------------------------
 # Default Directories
 # ------------------------------------------
-# # Root directory
-# module_dir = os.path.dirname(os.path.realpath(__file__))
-# root_dir = os.path.dirname(module_dir)
-# # Input data directory to read training and test data from
-# input_dir = os.path.join(root_dir, "input_data")
-# # Output data directory to write predictions to
-# output_dir = os.path.join(root_dir, "sample_result_submission")
-# # Program directory
-# program_dir = os.path.join(root_dir, "ingestion_program")
-# # Directory to read submitted submissions from
-# submission_dir = os.path.join(root_dir, "sample_code_submission")
-
-
-# ------------------------------------------
-# Codabench Directories
-# ------------------------------------------
 # Root directory
-root_dir = "/app"
+module_dir = os.path.dirname(os.path.realpath(__file__))
+root_dir = os.path.dirname(module_dir)
 # Input data directory to read training and test data from
-input_dir = os.path.join(root_dir, "input_data")
+input_dir = os.path.join(root_dir, "sample_data")
 # Output data directory to write predictions to
-output_dir = os.path.join(root_dir, "output")
+output_dir = os.path.join(root_dir, "sample_result_submission")
 # Program directory
-program_dir = os.path.join(root_dir, "program")
+program_dir = os.path.join(root_dir, "ingestion_program")
 # Directory to read submitted submissions from
-submission_dir = os.path.join(root_dir, "ingested_program")
+submission_dir = os.path.join(root_dir, "sample_code_submission")
 
 
 sys.path.append(input_dir)
@@ -94,34 +78,38 @@ class Ingestion():
 
     def show_duration(self):
         print("\n---------------------------------")
-        print(f'[✔] Total duration: {self.get_duration()}')
+        print(f'Total duration: {self.get_duration()}')
         print("---------------------------------")
 
     def load_data(self):
+        """
+          Loads data from csv file
+        """
         print("[*] Loading Data")
-
+    
         # data file path
         data_file = os.path.join(input_dir, 'relevance_sample_data.csv')
-
+        
         # read data
         self.df = pd.read_csv(data_file)
+
 
     def _text_to_dict(self, text):
         """
         Converts a text string into a dictionary.
-
+    
         :param text: A string representation of a dictionary.
         :return: A dictionary object if conversion is successful, otherwise {}.
         """
         try:
-            return ast.literal_eval(text)
+          return ast.literal_eval(text)
         except:
-            return {}  # Return an empty dictionary in case of an error
-
+          return {}  # Return an empty dictionary in case of an error
+    
     def _dict_to_paragraphs(self, dictionary):
         """
         Converts a dictionary into a string of paragraphs.
-
+    
         :param dictionary: A dictionary.
         :return: A string composed of paragraphs based on the dictionary's key-value pairs.
         """
@@ -129,95 +117,111 @@ class Ingestion():
         for i, (k, v) in enumerate(dictionary.items()):
             text += k.capitalize() + '\n' + v + '\n'
         return text
-
+  
     def transfrom_data(self):
 
         print("[*] Transforming Data")
-
+        
         # Convert to dictionary
         self.df['most_relevant_dict'] = self.df['most_relevant'].apply(self._text_to_dict)
         self.df['second_most_relevant_dict'] = self.df['second_most_relevant'].apply(self._text_to_dict)
         self.df['second_least_relevant_dict'] = self.df['second_least_relevant'].apply(self._text_to_dict)
         self.df['least_relevant_dict'] = self.df['least_relevant'].apply(self._text_to_dict)
-
+    
+    
         # Convert from dictionary to text
         self.df['most_relevant_text'] = self.df['most_relevant_dict'].apply(self._dict_to_paragraphs)
         self.df['second_most_relevant_text'] = self.df['second_most_relevant_dict'].apply(self._dict_to_paragraphs)
         self.df['second_least_relevant_text'] = self.df['second_least_relevant_dict'].apply(self._dict_to_paragraphs)
         self.df['least_relevant_text'] = self.df['least_relevant_dict'].apply(self._dict_to_paragraphs)
 
-    def _get_embeddings(self, text1, text2):
+    
+    def pad_sequence_to_max_length(self, sequence, padding_value=0):
         """
-        Generates embeddings for two texts.
+        this functions pads an input sequence
+        """
+        padded_sequence = sequence + [padding_value] * (self.max_length - len(sequence))
+        return padded_sequence
 
-        :param text1: First text string.
-        :param text2: Second text string.
-        :return: Tuple of embeddings for text1 and text2.
-        """
-        embedding1 = self.embeddings_model.encode(text1, convert_to_tensor=True)
-        embedding2 = self.embeddings_model.encode(text2, convert_to_tensor=True)
-        return embedding1.cpu(), embedding2.cpu()
 
     def prepare_data(self):
-
+    
         print("[*] Prepare Data for Training")
-
-        model_name = 'paraphrase-MiniLM-L6-v2'
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.embeddings_model = SentenceTransformer(model_name, device=device)
-
-        # Create embeddings for each pair
-        self.df['most_relevant_embeddings'] = self.df.progress_apply(lambda row: self._get_embeddings(row['prompt'], row['most_relevant_text']), axis=1)
-        self.df['second_most_relevant_embeddings'] = self.df.progress_apply(lambda row: self._get_embeddings(row['prompt'], row['second_most_relevant_text']), axis=1)
-        self.df['second_least_relevant_embeddings'] = self.df.progress_apply(lambda row: self._get_embeddings(row['prompt'], row['second_least_relevant_text']), axis=1)
-        self.df['least_relevant_embeddings'] = self.df.progress_apply(lambda row: self._get_embeddings(row['prompt'], row['least_relevant_text']), axis=1)
-
-        # Label the Data
-        self.df['most_relevant_label'] = 3
-        self.df['second_most_relevant_label'] = 2
-        self.df['second_least_relevant_label'] = 1
-        self.df['least_relevant_label'] = 0
-
-        X = self.df['most_relevant_embeddings'].tolist() + self.df['second_most_relevant_embeddings'].tolist() + self.df['second_least_relevant_embeddings'].tolist() + self.df['least_relevant_embeddings'].tolist()
-        y = self.df['most_relevant_label'].tolist() + self.df['second_most_relevant_label'].tolist() + self.df['second_least_relevant_label'].tolist() + self.df['least_relevant_label'].tolist()
-
-        # Convert embeddings from tuples to concatenated arrays
-        X = [torch.abs(embeddings[0] - embeddings[1]).numpy() for embeddings in X]
-
-        # Shuffle X and y
-        X, y = shuffle(X, y, random_state=42)
-
-        # train test split
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+        tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+    
+        least_relevant_df = pd.DataFrame()
+        least_relevant_df['input'] = self.df.progress_apply(lambda row: tokenizer.encode(row['prompt'] + " " + row['least_relevant_text'], truncation=True), axis=1)
+        least_relevant_df['label'] = 0
+        
+        second_least_relevant_df = pd.DataFrame()
+        second_least_relevant_df['input'] = self.df.progress_apply(lambda row: tokenizer.encode(row['prompt'] + " " + row['second_least_relevant_text'], truncation=True), axis=1)
+        second_least_relevant_df['label'] = 1
+        
+        second_most_relevant_df = pd.DataFrame()
+        second_most_relevant_df['input'] = self.df.progress_apply(lambda row: tokenizer.encode(row['prompt'] + " " + row['second_most_relevant_text'], truncation=True), axis=1)
+        second_most_relevant_df['label'] = 2
+        
+        most_relevant_df = pd.DataFrame()
+        most_relevant_df['input'] = self.df.progress_apply(lambda row: tokenizer.encode(row['prompt'] + " " + row['most_relevant_text'], truncation=True), axis=1)
+        most_relevant_df['label'] = 3
+    
+        # combine all 4 dataframes
+        tokenized_df = pd.concat([least_relevant_df, second_least_relevant_df, second_most_relevant_df, most_relevant_df], ignore_index=True)
+        
+        tokenized_df['label_onehot'] = tokenized_df['label'].apply(lambda x: list(np.eye(4)[x]))
+    
+        # shuffle combined dataframe
+        tokenized_df = tokenized_df.sample(frac=1, random_state=42).reset_index(drop=True)
+    
+        # pad the sequences
+        self.max_length=tokenized_df['input'].apply(len).max()
+        tokenized_df['input_padded'] = tokenized_df['input'].apply(lambda x: self.pad_sequence_to_max_length(x))
+        
+        X = torch.tensor(tokenized_df['input_padded'].tolist())
+        y = torch.tensor(tokenized_df['label_onehot'].tolist())
+    
+        dataset = TensorDataset(X, y)
+        self.train_dataset, self.test_dataset = train_test_split(dataset, test_size=0.2, random_state=42)
 
     def get_train_data(self):
-        return self.X_train, self.y_train
-
+        return self.train_dataset
+  
     def get_test_data(self):
-        return self.X_test, self.y_test
-
+        return self.test_dataset
+  
+    def show_random_sample(self):
+        random_sample_index = np.random.randint(0, len(self.df))
+    
+        print("Prompt:\n", self.df.iloc[random_sample_index]['prompt'], "...\n")
+        print("Most Relevant Text:\n", self.df.iloc[random_sample_index]['most_relevant_text'][:300], "...\n")
+        print("Second Most Relevant Text:\n", self.df.iloc[random_sample_index]['second_most_relevant_text'][:300], "...\n")
+        print("Second Least Relevant Text:\n", self.df.iloc[random_sample_index]['second_least_relevant_text'][:300], "...\n")
+        print("Least Relevant Text:\n", self.df.iloc[random_sample_index]['least_relevant_text'][:300], "...\n")
     def init_submission(self):
         print("[*] Initializing Submmited Model")
         self.model = Model()
 
     def fit_submission(self):
         print("[*] Calling fit method of submitted model")
-        X_train, y_train  = self.get_train_data()
-        self.model.fit(X_train, y_train)
+        train_dataloader = DataLoader(self.get_train_data(), batch_size=8, shuffle=True)
+        num_epochs=1
+        self.model.fit(train_dataloader, num_epochs)
 
     def predict_submission(self):
         print("[*] Calling predict method of submitted model")
 
-        X_test, _ = self.get_test_data()
-        self.y_test_hat = self.model.predict(X_test)
+        test_dataloader = DataLoader(self.get_test_data(), batch_size=8, shuffle=False)
+        self.y_test_hat, self.y_test_truth = self.model.predict(test_dataloader)
 
     def save_result(self):
         print("[*] Saving ingestion result")
 
-        _, y_test = self.get_test_data()
+        y_test_ = np.array(self.y_test_truth)
+        y_test = np.argmax(y_test_, axis=1)
         ingestion_result_dict = {
-            "predictions": self.y_test_hat.tolist(),
-            "labels": y_test
+            "predictions": self.y_test_hat,
+            "labels": y_test.tolist()
         }
         result_file = os.path.join(output_dir, "result.json")
         with open(result_file, 'w') as f:
@@ -264,5 +268,5 @@ if __name__ == '__main__':
     ingestion.show_duration()
 
     print("\n----------------------------------------------")
-    print("[✔] Ingestions Program executed successfully!")
+    print("Ingestions Program executed successfully!")
     print("----------------------------------------------\n\n")
