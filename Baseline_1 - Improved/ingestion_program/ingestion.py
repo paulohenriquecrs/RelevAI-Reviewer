@@ -9,11 +9,9 @@ import numpy as np
 from datetime import datetime as dt
 import ast
 from tqdm.notebook import tqdm
-from sentence_transformers import SentenceTransformer
-from transformers import BertTokenizer, BertForSequenceClassification
+from transformers import DistilBertTokenizer
 
 from sklearn.model_selection import train_test_split
-from sklearn.utils import shuffle
 import torch
 
 from torch.utils.data import DataLoader, TensorDataset
@@ -131,17 +129,23 @@ class Ingestion():
             text += k.capitalize() + '\n' + v + '\n'
         return text
   
+    def _thermometer_encode(self, label, num_classes):
+        encoded_label = np.zeros(num_classes - 1)
+        encoded_label[:label] = 1
+
+        return encoded_label
+  
     def transfrom_data(self):
 
         print("[*] Transforming Data")
-        
+
         # Convert to dictionary
         self.df['most_relevant_dict'] = self.df['most_relevant'].apply(self._text_to_dict)
         self.df['second_most_relevant_dict'] = self.df['second_most_relevant'].apply(self._text_to_dict)
         self.df['second_least_relevant_dict'] = self.df['second_least_relevant'].apply(self._text_to_dict)
         self.df['least_relevant_dict'] = self.df['least_relevant'].apply(self._text_to_dict)
-    
-    
+
+
         # Convert from dictionary to text
         self.df['most_relevant_text'] = self.df['most_relevant_dict'].apply(self._dict_to_paragraphs)
         self.df['second_most_relevant_text'] = self.df['second_most_relevant_dict'].apply(self._dict_to_paragraphs)
@@ -158,44 +162,53 @@ class Ingestion():
 
 
     def prepare_data(self):
-    
+
         print("[*] Prepare Data for Training")
-    
-        tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-    
+
+        tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
+
         least_relevant_df = pd.DataFrame()
-        least_relevant_df['input'] = self.df.progress_apply(lambda row: tokenizer.encode(row['prompt'] + " " + row['least_relevant_text'], truncation=True), axis=1)
+        least_relevant_df['input'] = self.df.apply(lambda row: tokenizer.encode(row['prompt'] + " " + row['least_relevant_text'], truncation=True), axis=1)
         least_relevant_df['label'] = 0
-        
+    
         second_least_relevant_df = pd.DataFrame()
-        second_least_relevant_df['input'] = self.df.progress_apply(lambda row: tokenizer.encode(row['prompt'] + " " + row['second_least_relevant_text'], truncation=True), axis=1)
+        second_least_relevant_df['input'] = self.df.apply(lambda row: tokenizer.encode(row['prompt'] + " " + row['second_least_relevant_text'], truncation=True), axis=1)
         second_least_relevant_df['label'] = 1
-        
+
         second_most_relevant_df = pd.DataFrame()
-        second_most_relevant_df['input'] = self.df.progress_apply(lambda row: tokenizer.encode(row['prompt'] + " " + row['second_most_relevant_text'], truncation=True), axis=1)
+        second_most_relevant_df['input'] = self.df.apply(lambda row: tokenizer.encode(row['prompt'] + " " + row['second_most_relevant_text'], truncation=True), axis=1)
         second_most_relevant_df['label'] = 2
-        
+
         most_relevant_df = pd.DataFrame()
-        most_relevant_df['input'] = self.df.progress_apply(lambda row: tokenizer.encode(row['prompt'] + " " + row['most_relevant_text'], truncation=True), axis=1)
+        most_relevant_df['input'] = self.df.apply(lambda row: tokenizer.encode(row['prompt'] + " " + row['most_relevant_text'], truncation=True), axis=1)
         most_relevant_df['label'] = 3
-    
+
         # combine all 4 dataframes
-        tokenized_df = pd.concat([least_relevant_df, second_least_relevant_df, second_most_relevant_df, most_relevant_df], ignore_index=True)
-        
-        tokenized_df['label_onehot'] = tokenized_df['label'].apply(lambda x: list(np.eye(4)[x]))
+        concatenated_rows = []
+        # Iterate over the rows of the DataFrames and concatenate them row by row
+        for index in range(len(most_relevant_df)):
+            concatenated_row = pd.concat([most_relevant_df.iloc[[index]], second_most_relevant_df.iloc[[index]], second_least_relevant_df.iloc[[index]], least_relevant_df.iloc[[index]]], ignore_index=True)
+            concatenated_rows.append(concatenated_row)
+
+        # Concatenate the list of concatenated rows into a single DataFrame
+        tokenized_df = pd.concat(concatenated_rows, ignore_index=True)
     
-        # shuffle combined dataframe
-        tokenized_df = tokenized_df.sample(frac=1, random_state=42).reset_index(drop=True)
-    
+        tokenized_df['label_onehot'] = tokenized_df['label'].apply(lambda x : self._thermometer_encode(x, 4))
+
         # pad the sequences
         self.max_length=tokenized_df['input'].apply(len).max()
         tokenized_df['input_padded'] = tokenized_df['input'].apply(lambda x: self.pad_sequence_to_max_length(x))
-        
-        X = torch.tensor(tokenized_df['input_padded'].tolist())
-        y = torch.tensor(tokenized_df['label_onehot'].tolist())
-    
+        X = tokenized_df['input_padded']
+        y = tokenized_df['label_onehot']
+        grouped_data = [(X[i:i+4], y[i:i+4]) for i in range(0, len(X), 4)]
+        np.random.shuffle(grouped_data)
+        shuffled_X, shuffled_y = zip(*[(x, label) for group in grouped_data for x, label in zip(group[0], group[1])])
+
+        X = torch.tensor(shuffled_X)
+        y = torch.tensor(shuffled_y)
+
         dataset = TensorDataset(X, y)
-        self.train_dataset, self.test_dataset = train_test_split(dataset, test_size=0.2, random_state=42)
+        self.train_dataset, self.test_dataset = train_test_split(dataset, test_size=0.2, shuffle=False)
 
     def get_train_data(self):
         return self.train_dataset
@@ -217,14 +230,14 @@ class Ingestion():
 
     def fit_submission(self):
         print("[*] Calling fit method of submitted model")
-        train_dataloader = DataLoader(self.get_train_data(), batch_size=8, shuffle=True)
+        train_dataloader = DataLoader(self.get_train_data(), batch_size=4, shuffle=True)
         num_epochs=1
         self.model.fit(train_dataloader, num_epochs)
 
     def predict_submission(self):
         print("[*] Calling predict method of submitted model")
 
-        test_dataloader = DataLoader(self.get_test_data(), batch_size=8, shuffle=False)
+        test_dataloader = DataLoader(self.get_test_data(), batch_size=4, shuffle=False)
         self.y_test_hat, self.y_test_truth = self.model.predict(test_dataloader)
 
     def save_result(self):
