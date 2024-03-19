@@ -1,12 +1,28 @@
+"""The Scoring class is designed to perform scoring tasks and manage related functionalities.
+    The purpose of this class is to evaluate the performance of a model by comparing its predicted 
+    labels with the ground truth labels.
+    It computes various scoring metrics, writes the results to a JSON file, and generates an HTML file
+    containing detailed results. 
+"""
+
 # ------------------------------------------
 # Imports
 # ------------------------------------------
 import os
 import numpy as np
+import pandas as pd
 import json
 from datetime import datetime as dt
 from sklearn.metrics import classification_report
 from scipy.stats import kendalltau
+
+import random
+import torch
+
+random.seed(0)
+np.random.seed(0)
+torch.manual_seed(0)
+
 
 # ------------------------------------------
 # Default Directories
@@ -23,7 +39,30 @@ prediction_dir = os.path.join(root_dir, "sample_result_submission")
 # score file to write score into
 score_file = os.path.join(output_dir, "scores.json")
 # html file to write score and figures into
+html_file = os.path.join(output_dir, "detailed_results.html")
+
+
+"""
+
+# ------------------------------------------
+# Codabench Directories
+# ------------------------------------------
+# root directory
+root_dir = "/app"
+# Directory read predictions and solutions from
+input_dir = os.path.join(root_dir, "input")
+# Directory to output computed score into
+output_dir = os.path.join(root_dir, "output")
+# reference data (test labels)
+reference_dir = os.path.join(input_dir, 'ref')  # Ground truth data
+# submitted/predicted labels
+prediction_dir = os.path.join(input_dir, 'res')
+# score file to write score into
+score_file = os.path.join(output_dir, 'scores.json')
+# html file to write score and figures into
 html_file = os.path.join(output_dir, 'detailed_results.html')
+
+"""
 
 
 class Scoring:
@@ -69,16 +108,12 @@ class Scoring:
 
     def compute_scores(self):
         print("[*] Computing scores")
-
         # Classification report
         self._print(classification_report(self.y_test, self.y_test_hat))
-
         k_tau, _ = kendalltau(self.y_test, self.y_test_hat)
         self._print(f"Kendall's Tau: {k_tau}")
 
-        self.scores_dict = {
-            "k_tau": k_tau
-        }
+        self.scores_dict = {"k_tau": k_tau}
 
         print("[OK]")
 
@@ -91,7 +126,7 @@ class Scoring:
         print("[OK]")
 
     def write_html(self, content):
-        with open(html_file, 'a', encoding="utf-8") as f:
+        with open(html_file, "a", encoding="utf-8") as f:
             f.write(content)
 
     def _print(self, content):
