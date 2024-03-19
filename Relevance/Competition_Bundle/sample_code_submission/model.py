@@ -1,21 +1,39 @@
-# Model file which contains a model class in scikit-learn style
-# Model class must have these 3 methods
-# - __init__: initializes the model
-# - fit: trains the model
-# - predict: uses the model to perform predictions
-#
-# Created by: Ihsan Ullah
-# Created on: 10 Jan, 2024
+""" The `Model` file encapsulates a model class structured in the style of scikit-learn. 
+    This model class is equipped with three essential methods:
+    - __init__: Initializes the model.
+    - fit: Trains the model.
+    - predict: Utilizes the model to make predictions.
+Created by: Ihsan Ullah
+Created on: 10 Jan, 2024
+Updated by: Paulo Couto
+Updated on: 18 Mar, 2024
+"""
 
 # ----------------------------------------
 # Imports
 # ----------------------------------------
-from transformers import BertForSequenceClassification
-import torch
-from tqdm import tqdm
+from sklearn.svm import SVC
+from sklearn.decomposition import PCA
+from sklearn.pipeline import Pipeline
 
+import sys
+import os
+import json
+import pandas as pd
+import numpy as np
+from datetime import datetime as dt
+import ast
 from tqdm.notebook import tqdm
-# from sklearn.naive_bayes import MultinomialNB
+from sentence_transformers import SentenceTransformer
+
+
+import numpy as np
+import random
+import torch
+
+random.seed(0)
+np.random.seed(0)
+torch.manual_seed(0)
 
 
 # ----------------------------------------
@@ -36,30 +54,54 @@ class Model:
         None
         """
         print("[*] - Initializing Classifier")
-        self.id2label = {0: "least_relevant", 1: "second_least_relevant", 2: "second_most_relevant", 3: "most_relevant"}
-        self.label2id = {"least_relevant": 0, "second_least_relevant": 1, "second_most_relevant": 2, "most_relevant": 3}
-        
-        self.model = BertForSequenceClassification.from_pretrained(
-            "bert-base-uncased",
-            problem_type="multi_label_classification",
-            num_labels=4,
-            id2label=self.id2label,
-            label2id=self.label2id
-            )
+        pca = PCA(n_components=None)
+        regressor = SVC(kernel="rbf", gamma="scale", C=1)
+        self.pipeline = Pipeline([("pca", pca), ("regressor", regressor)])
 
-        # set device (cpu for local machines)
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model.to(self.device)
-        self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=5e-5)
+    def _get_embeddings(self, text1, text2):
+        """
+        Generates embeddings for two texts.
 
-    def fit(self, dataloader, num_epochs=1):
+        :param text1: First text string.
+        :param text2: Second text string.
+        :return: Tuple of embeddings for text1 and text2.
+        """
+        embedding1 = self.embeddings_model.encode(text1, convert_to_tensor=True)
+        embedding2 = self.embeddings_model.encode(text2, convert_to_tensor=True)
+        return embedding1.cpu(), embedding2.cpu()
+
+    def prepare_data(self, df, str="Training/Testing"):
+
+        print("[*] Prepare Data for " + str)
+
+        model_name = "paraphrase-MiniLM-L6-v2"
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.embeddings_model = SentenceTransformer(model_name, device=device)
+
+        # Create embeddings
+
+        df["embeddings"] = df.progress_apply(
+            lambda row: self._get_embeddings(row["prompt"], row["text"]), axis=1
+        )
+
+        X = df["embeddings"].tolist()
+
+        # Convert embeddings from tuples to concatenated arrays
+        X = [torch.abs(embeddings[0] - embeddings[1]).numpy() for embeddings in X]
+
+        return X
+
+    def fit(self, X, y):
         """
         This function trains the model provided training data
 
         Parameters
         ----------
-        train_dataloader:   Pytorch Dataloader with training data
-        num_epochs:         Integer representing the number of epochs fro training
+        X: 2D numpy array
+            training data matrix of dimension num_train_examples * num_features
+            each column is a feature and each row a datapoint
+        y: 1D numpy array
+            training label matrix of dimension num_train_samples
 
         Returns
         -------
@@ -67,53 +109,25 @@ class Model:
         """
 
         print("[*] - Training Classifier on the train set")
-        for epoch in range(num_epochs):
-            self.model.train()
-            total_loss = 0
-    
-            for batch in tqdm(dataloader, desc=f"Epoch {epoch + 1}"):
-                inputs, labels = batch
-                inputs, labels = inputs.to(self.device), labels.to(self.device)
-    
-                self.optimizer.zero_grad()
-                outputs = self.model(inputs, labels=labels)
-                loss = outputs.loss
-                total_loss += loss.item()
-    
-                loss.backward()
-                self.optimizer.step()
-    
-            avg_loss = total_loss / len(dataloader)
-            print(f"Average training loss: {avg_loss}")
+        self.pipeline.fit(X, y)
 
-
-    def predict(self, dataloader):
-
+    def predict(self, X):
         """
         This function predicts labels on test data.
 
         Parameters
         ----------
-        X: Pytorch Dataloader with test data
+        X: 2D numpy array
+            test data matrix of dimension num_test_examples * num_features
+            each column is a feature and each row a datapoint
 
         Returns
         -------
-        y_pred: List of predicted labels
-        y_true: List of true test labels
+        y: 1D numpy array
+            predicted labels
         """
 
         print("[*] - Predicting test set using trained Classifier")
-        self.model.eval()
-        predictions = []
-        true_labels = []
-        
-        for batch in dataloader:
-            inputs, labels = batch
-            with torch.no_grad():
-                outputs = self.model(inputs)
-        
-            logits = outputs.logits
-            predictions.extend(torch.argmax(logits, dim=1).tolist())
-            true_labels.extend(labels.tolist())
+        y = self.pipeline.predict(X)
 
-        return predictions, true_labels
+        return y
