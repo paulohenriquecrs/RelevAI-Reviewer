@@ -8,6 +8,9 @@ Recent advancements in Artificial Intelligence (AI), particularly the widespread
 ### Dataset
 The full dataset used in this research can be accessed [here](https://drive.google.com/drive/u/1/folders/1fG74aCrU43J7gJvTyQaai2AlpN8dYHKL?usp=sharing_eip_m&invite=CLuInRE&ts=65a4f341).
 
+### Research Paper  
+You can read the full paper [here](https://hal.science/LISN/hal-04608255v1).  
+
 ### Authors
 #### Students
 - Paulo Henrique Couto (Group Leader)
